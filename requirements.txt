@@ -6,3 +6,4 @@ fastapi
 dotenv
 uvicorn
 ddgs
+pytest
