@@ -9,7 +9,7 @@ tools = [
     get_current_date
 ]
 
-@helper_router.get("/heath", status_code=200)
+@helper_router.get("/health", status_code=200)
 async def health_check():
     """
     Endpoint to check server heath status
