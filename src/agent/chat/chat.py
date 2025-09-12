@@ -5,7 +5,7 @@ from langgraph.graph import StateGraph, END, add_messages
 from langgraph.checkpoint.memory import MemorySaver
 from langchain_core.messages import BaseMessage, ToolMessage
 from src.llm.model import get_gemini_model
-from src.tools.search_tools import duck_search
+from src.tools.search_tools import tavily_search
 from src.tools.date_tools import get_current_date
 
 class State(TypedDict):
@@ -29,7 +29,7 @@ class Chat:
             top_p=0.3,
             top_k=10
         )
-        self.llm_with_tools = self.llm.bind_tools([duck_search, get_current_date])
+        self.llm_with_tools = self.llm.bind_tools([tavily_search, get_current_date])
         self.memory = MemorySaver()
         self.graph = self._build_graph()
 
@@ -85,18 +85,7 @@ class Chat:
             tool_args = tool_call["args"]
             tool_id = tool_call["id"]
 
-            if tool_name == "duckduckgo_results_json":
-                logging.info("Calling duckduckgo search tool")
-                search_results = await duck_search.ainvoke(tool_args)
-
-                tool_message = ToolMessage(
-                    name=tool_name,
-                    content=str(search_results),
-                    tool_call_id=tool_id
-                )
-                tool_messages.append(tool_message)
-
-            elif tool_name == "get_date":
+            if tool_name == "get_date":
                 logging.info("Calling get_date tool")
                 date = await get_current_date.ainvoke(tool_args)
 
@@ -106,6 +95,18 @@ class Chat:
                     tool_call_id=tool_id
                 )
                 tool_messages.append(tool_message)
+
+            elif tool_name == "tavily_search":
+                logging.info("Calling tavily_search tool")
+                search_results = await tavily_search.ainvoke(tool_args)
+
+                tool_message = ToolMessage(
+                    name=tool_name,
+                    content=str(search_results),
+                    tool_call_id=tool_id
+                )
+                tool_messages.append(tool_message)
+
 
         return {
             "messages": tool_messages
