@@ -5,5 +5,4 @@ langgraph
 fastapi
 dotenv
 uvicorn
-ddgs
 pytest
