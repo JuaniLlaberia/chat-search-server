@@ -1,12 +1,12 @@
 from fastapi import APIRouter
 from src.tools.date_tools import get_current_date
-from src.tools.search_tools import duck_search
+from src.tools.search_tools import tavily_search
 
 helper_router = APIRouter()
 
 tools = [
-    duck_search,
-    get_current_date
+    get_current_date,
+    tavily_search
 ]
 
 @helper_router.get("/health", status_code=200)

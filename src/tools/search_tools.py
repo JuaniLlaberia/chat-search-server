@@ -1,6 +1,9 @@
-from langchain_community.tools import DuckDuckGoSearchResults
+import os
+from langchain_tavily import TavilySearch
 
-duck_search = DuckDuckGoSearchResults(
-    num_results=6,
-    output_format="list",
+tavily_search = TavilySearch(
+    max_results=15,
+    search_depth="advanced",
+    include_images=True,
+    tavily_api_key=os.getenv("TAVILY_API_KEY", "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"),
 )
