@@ -5,6 +5,7 @@ from langchain_core.messages import HumanMessage
 from langgraph.graph import StateGraph
 from uuid import uuid4
 from typing import Optional
+from src.utils.data_extraction import get_duckduckgo_favicon, extract_site_name
 
 async def generate_chat_responses(graph: StateGraph, message: str, checkpoint_id: Optional[str] = None):
     """
@@ -19,12 +20,14 @@ async def generate_chat_responses(graph: StateGraph, message: str, checkpoint_id
         if checkpoint_id is None:
             # Create unique id to find memory
             checkpoint_id = str(uuid4())
-
             yield f"data: {json.dumps({'type': 'checkpoint', 'checkpoint_id': checkpoint_id})}\n\n"
 
         config = {"configurable": {"thread_id": checkpoint_id}}
+        print(config)
 
-        input_data = {"messages": [HumanMessage(content=message.strip())]}
+        input_data = {
+            "messages": [HumanMessage(content=message.strip())],
+        }
 
         sent_content = set()
         total_content = ""
@@ -37,8 +40,11 @@ async def generate_chat_responses(graph: StateGraph, message: str, checkpoint_id
 
                 logging.info(f"Event: {event_type} | Name: {event_name}")
 
+                if event_name == "tool_node" and event_type == "on_chain_start":
+                    yield f"data: {json.dumps({'type': 'search_start'})}\n\n"
+
                 # Handle tool_node
-                if event_name == "tool_node" and event_type in ["on_chain_stream", "on_chain_end"]:
+                elif event_name == "tool_node" and event_type in ["on_chain_stream", "on_chain_end"]:
                     chunk = event_data.get("chunk", {})
                     messages = chunk.get("messages", [])
 
@@ -46,19 +52,24 @@ async def generate_chat_responses(graph: StateGraph, message: str, checkpoint_id
                         first_message = messages[0]
 
                         # Web search tool
-                        if hasattr(first_message, 'name') and first_message.name == "duckduckgo_results_json":
+                        if hasattr(first_message, 'name') and first_message.name == "tavily_search":
                             tool_output_string = first_message.content
-
                             try:
                                 # Parse the string into a dictionary.
                                 results = ast.literal_eval(tool_output_string)
-                                urls = [item["link"] for item in results if isinstance(item, dict) and "link" in item]
 
-                                if urls:
-                                    yield f"data: {json.dumps({'type': 'search_results', 'urls': urls})}\n\n"
-
+                                sources = [{
+                                        "title": result["title"],
+                                        "url": result["url"],
+                                        "site": extract_site_name(url=result["url"]),
+                                        "site_icon": get_duckduckgo_favicon(url=result["url"]),
+                                        } for result in results["results"] if isinstance(result, dict) and "url" in result]
+                                images = results["images"]
+                                if sources:
+                                    yield f"data: {json.dumps({'type': 'search_results', 'sources': sources, 'images': images})}\n\n"
                             except (ValueError, SyntaxError, AttributeError) as e:
                                 logging.error(f"Error parsing tool output: {e}")
+
                 # Handle streaming chain
                 elif event_type == "on_chain_stream":
                     chunk = event_data.get("chunk", {})
@@ -70,6 +81,7 @@ async def generate_chat_responses(graph: StateGraph, message: str, checkpoint_id
                                 if content and content not in sent_content:
                                     sent_content.add(content)
                                     total_content += content
+
                                     yield f"data: {json.dumps({'type': 'content', 'content': content})}\n\n"
 
                     elif hasattr(chunk, "content") and chunk.content:
@@ -77,6 +89,7 @@ async def generate_chat_responses(graph: StateGraph, message: str, checkpoint_id
                         if content and content not in sent_content:
                             sent_content.add(content)
                             total_content += content
+
                             yield f"data: {json.dumps({'type': 'content', 'content': content})}\n\n"
 
             except Exception as e:
