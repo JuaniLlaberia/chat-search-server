@@ -14,6 +14,14 @@ Key design goals:
 
 Front-end application: [Web Search Agent Frontend](https://github.com/JuaniLlaberia/chat-search-client)
 
+<details>
+  <summary>▶️ Watch Demo (1.2x speec)</summary>
+  
+  https://github.com/user-attachments/assets/f371ea5d-6430-4dca-9e1d-206c990a678d
+
+
+</details>
+
 ---
 
 ## 🚀 Features
