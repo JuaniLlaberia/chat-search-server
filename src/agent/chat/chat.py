@@ -5,11 +5,14 @@ from langgraph.graph import StateGraph, END, add_messages
 from langgraph.checkpoint.memory import MemorySaver
 from langchain_core.messages import BaseMessage, ToolMessage
 from src.llm.model import get_gemini_model
-from src.tools.search_tools import duck_search
+from src.tools.search_tools import tavily_search
 from src.tools.date_tools import get_current_date
+from src.tools.weather import get_weather
+from src.tools.crypto_markets import get_crypto_price, get_crypto_details, get_trending_cryptos, search_crypto_coins, get_crypto_market_overview, get_top_cryptos
 
 class State(TypedDict):
     messages: Annotated[list, add_messages]
+    topic: Literal["general", "news", "finance"]
 
 class Chat:
     """
@@ -29,7 +32,16 @@ class Chat:
             top_p=0.3,
             top_k=10
         )
-        self.llm_with_tools = self.llm.bind_tools([duck_search, get_current_date])
+        self.llm_with_tools = self.llm.bind_tools([
+            tavily_search,
+            get_current_date,
+            get_weather,
+            get_crypto_price,
+            get_crypto_details,
+            get_trending_cryptos,
+            search_crypto_coins,
+            get_crypto_market_overview,
+            get_top_cryptos])
         self.memory = MemorySaver()
         self.graph = self._build_graph()
 
@@ -80,32 +92,44 @@ class Chat:
                 "messages": tool_messages
             }
 
+        tool_map = {
+            "get_date": get_current_date,
+            "tavily_search": tavily_search,
+            "get_weather": get_weather,
+            "get_crypto_price": get_crypto_price,
+            "get_crypto_details": get_crypto_details,
+            "get_trending_cryptos": get_trending_cryptos,
+            "search_crypto_coins": search_crypto_coins,
+            "get_crypto_market_overview": get_crypto_market_overview,
+            "get_top_cryptos": get_top_cryptos
+        }
+
         for tool_call in tool_calls:
             tool_name = tool_call["name"]
-            tool_args = tool_call["args"]
             tool_id = tool_call["id"]
+            tool_args = tool_call["args"]
 
-            if tool_name == "duckduckgo_results_json":
-                logging.info("Calling duckduckgo search tool")
-                search_results = await duck_search.ainvoke(tool_args)
+            if tool_name not in tool_map:
+                logging.warning(f"Unknown tool: {tool_name}")
+                continue
 
-                tool_message = ToolMessage(
-                    name=tool_name,
-                    content=str(search_results),
-                    tool_call_id=tool_id
-                )
-                tool_messages.append(tool_message)
+            logging.info(f"Calling {tool_name} tool")
 
-            elif tool_name == "get_date":
-                logging.info("Calling get_date tool")
-                date = await get_current_date.ainvoke(tool_args)
+            if tool_name == "tavily_search":
+                tool_args = {
+                    **tool_args,
+                    "topic": state["topic"],
+                    "max_results": 20 if state["topic"] == "news" else 15,
+                }
 
-                tool_message = ToolMessage(
-                    name=tool_name,
-                    content=str(date),
-                    tool_call_id=tool_id
-                )
-                tool_messages.append(tool_message)
+            result = await tool_map[tool_name].ainvoke(tool_args)
+
+            tool_message = ToolMessage(
+                name=tool_name,
+                content=str(result),
+                tool_call_id=tool_id
+            )
+            tool_messages.append(tool_message)
 
         return {
             "messages": tool_messages
