@@ -1,44 +1,53 @@
-# LangGraph Web Search Agent (Finder)
+# LangGraph Web Search Agent
 
-Related repositories
-
-Frontend (UI): [Web Search Agent Frontend](https://github.com/JuaniLlaberia/chat-search-client)
-
-## Project overview
-
-This repository contains a configurable LangGraph agent designed to search the internet and return concise, sourced answers and related links. The agent behaves like a high-quality web research assistant: it issues web queries, evaluates sources, synthesizes results, and returns short summaries with references and follow-up suggestions.
+This repository contains a configurable LangGraph agent designed to search the internet and return concise, sourced answers, images and related links. The agent behaves like a high-quality web research assistant: it issues web queries, evaluates sources, synthesizes results, and returns short summaries with references, sources, images and follow-up suggestions.
 
 Key design goals:
 
 * Fast, relevant answers to user questions.
 * Transparent sourcing (show where results came from).
-* Extensible toolset (search engines, browser, site-specific scrapers).
-* Safe defaults (rate limits, content filters, refusal policies).
+* Related images and sites.
+* Different tools (Finance, weather, time, etc.)
+* Web search
+  
+### Related repositories
+
+Front-end application: [Web Search Agent Frontend](https://github.com/JuaniLlaberia/chat-search-client)
 
 ---
 
-## Features
+## 🚀 Features
 
 * Natural-language Q/A over live web search results.
-* Multi-source aggregation with scoring and de-duplication.
-* Citation-aware responses.
-* Rate-limiting and politeness options for scrapers and browser tools.
+* FastAPI + LangGraph multi-agent architecture
+* Web search with Tavily (content, images and sources extraction)
+* Data extraction and synthesis
+* Citation gathering and ranking
+* Streaming responses with SSE for real-time UI updates
+* Modular design → easily extendable with new tools/agents
+* Transparent reasoning: exposes underlying sources
 
 ---
+## 📦 Installation & Usage
+1. Clone the repo:
+   ```bash
+   git clone https://github.com/JuaniLlaberia/chat-search-server.git
+   cd chat-search-server
+   ```
+2. Install dependencies:
+   ```bash
+   pip install -r requirements.txt
+   ```
+3. Run Agent locally (FastAPI):
 
-## Architecture (high level)
-
-1. **Client UI**: a simple chat interface that accepts user queries and displays agent replies and citations.
-2. **LangGraph Agent**: orchestrates tools (search, browser, scraper, summarizer) and composes the final answer.
-3. **Tools / Connectors**:
-   * *Search tool(s)*: external search engine API(s) or self-hosted index.
-   * (Can add more)
-4. **Evaluator & Synthesizer**: ranks candidates, removes duplicates, crafts the final natural-language response, and generates citations.
-
+   ```bash
+   python .
+   ```
 ---
 
-## Environment variables
+## 🗝️ Environment variables
 
-* `GOOGLE_API_KEY` — gemini API key from google.
-* `MODEL_NAME` — gemini model name to use.
+* `GOOGLE_API_KEY` — Gemini API key from google.
+* `MODEL_NAME` — Gemini model name to use.
+* `TAVILY_SEARCH` — Tavily search API key.
 
