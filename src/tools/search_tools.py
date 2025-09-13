@@ -5,5 +5,5 @@ tavily_search = TavilySearch(
     max_results=15,
     search_depth="advanced",
     include_images=True,
-    tavily_api_key=os.getenv("TAVILY_API_KEY", "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"),
+    tavily_api_key=os.getenv("TAVILY_API_KEY", ""),
 )
