@@ -1,13 +1,14 @@
 import logging
 import json
 import ast
+from typing import Literal
 from langchain_core.messages import HumanMessage
 from langgraph.graph import StateGraph
 from uuid import uuid4
 from typing import Optional
 from src.utils.data_extraction import get_duckduckgo_favicon, extract_site_name
 
-async def generate_chat_responses(graph: StateGraph, message: str, checkpoint_id: Optional[str] = None):
+async def generate_chat_responses(graph: StateGraph, message: str, topic: Literal["general", "news", "finance"], checkpoint_id: Optional[str] = None):
     """
     Generate streaming chat responses
 
@@ -27,6 +28,7 @@ async def generate_chat_responses(graph: StateGraph, message: str, checkpoint_id
 
         input_data = {
             "messages": [HumanMessage(content=message.strip())],
+            "topic": topic,
         }
 
         sent_content = set()

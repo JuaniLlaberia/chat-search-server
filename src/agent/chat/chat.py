@@ -10,6 +10,7 @@ from src.tools.date_tools import get_current_date
 
 class State(TypedDict):
     messages: Annotated[list, add_messages]
+    topic: Literal["general", "news", "finance"]
 
 class Chat:
     """
@@ -98,6 +99,13 @@ class Chat:
 
             elif tool_name == "tavily_search":
                 logging.info("Calling tavily_search tool")
+
+                tool_args = {
+                    **tool_args,
+                    "topic": state["topic"],
+                    "max_results": 20 if state["topic"] == "news" else 15,
+                }
+
                 search_results = await tavily_search.ainvoke(tool_args)
 
                 tool_message = ToolMessage(

@@ -1,5 +1,6 @@
 import os
 import logging
+from typing import Literal
 from fastapi import APIRouter, Query, HTTPException
 from fastapi.responses import StreamingResponse
 from src.utils.responses import generate_chat_responses
@@ -9,7 +10,7 @@ chat_router = APIRouter()
 graph_instance = Chat(model_name=os.getenv("MODEL_NAME", "gemini-2.5-flash")).graph
 
 @chat_router.get("/chat_stream/{message}")
-async def chat_stream(message: str, checkpoint_id: str | None = Query(None)):
+async def chat_stream(message: str, topic: Literal["general", "news", "finance"], checkpoint_id: str | None = Query(None)):
     """
     Endpoint to stream chat responses
     """
@@ -22,6 +23,7 @@ async def chat_stream(message: str, checkpoint_id: str | None = Query(None)):
         generate_chat_responses(
             graph=graph_instance,
             message=message,
+            topic=topic,
             checkpoint_id=checkpoint_id
         ),
         media_type="text/event-stream",
