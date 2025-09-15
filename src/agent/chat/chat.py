@@ -9,6 +9,7 @@ from src.tools.search_tools import tavily_search
 from src.tools.date_tools import get_current_date
 from src.tools.weather import get_weather
 from src.tools.crypto_markets import get_crypto_price, get_crypto_details, get_trending_cryptos, search_crypto_coins, get_crypto_market_overview, get_top_cryptos
+from .utils.prompts import CHAT_PROMPT
 
 class State(TypedDict):
     messages: Annotated[list, add_messages]
@@ -73,7 +74,9 @@ class Chat:
         """
         Node that calls the llm with tools
         """
-        result = await self.llm_with_tools.ainvoke(state["messages"])
+        chain = CHAT_PROMPT | self.llm_with_tools
+
+        result = await chain.ainvoke({"messages": state["messages"]})
         return {
             "messages": [result]
         }
