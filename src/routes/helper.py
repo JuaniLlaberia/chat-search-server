@@ -1,5 +1,5 @@
 from fastapi import APIRouter
-from src.tools.date_tools import get_current_date
+from src.tools.date_tools import get_current_date, get_current_time
 from src.tools.search_tools import tavily_search
 from src.tools.weather import get_weather
 from src.tools.crypto_markets import get_crypto_price, get_crypto_details, get_trending_cryptos, search_crypto_coins, get_crypto_market_overview, get_top_cryptos
@@ -16,6 +16,7 @@ tools = [
     get_crypto_market_overview,
     get_top_cryptos,
     get_current_date,
+    get_current_time
 ]
 
 @helper_router.get("/health", status_code=200)

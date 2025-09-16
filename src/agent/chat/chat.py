@@ -6,9 +6,10 @@ from langgraph.checkpoint.memory import MemorySaver
 from langchain_core.messages import BaseMessage, ToolMessage
 from src.llm.model import get_gemini_model
 from src.tools.search_tools import tavily_search
-from src.tools.date_tools import get_current_date
+from src.tools.date_tools import get_current_date, get_current_time
 from src.tools.weather import get_weather
 from src.tools.crypto_markets import get_crypto_price, get_crypto_details, get_trending_cryptos, search_crypto_coins, get_crypto_market_overview, get_top_cryptos
+from .utils.prompts import CHAT_PROMPT
 
 class State(TypedDict):
     messages: Annotated[list, add_messages]
@@ -35,6 +36,7 @@ class Chat:
         self.llm_with_tools = self.llm.bind_tools([
             tavily_search,
             get_current_date,
+            get_current_time,
             get_weather,
             get_crypto_price,
             get_crypto_details,
@@ -73,7 +75,8 @@ class Chat:
         """
         Node that calls the llm with tools
         """
-        result = await self.llm_with_tools.ainvoke(state["messages"])
+        chain = CHAT_PROMPT | self.llm_with_tools
+        result = await chain.ainvoke({"messages": state["messages"]})
         return {
             "messages": [result]
         }
@@ -94,6 +97,7 @@ class Chat:
 
         tool_map = {
             "get_date": get_current_date,
+            "get_time": get_current_time,
             "tavily_search": tavily_search,
             "get_weather": get_weather,
             "get_crypto_price": get_crypto_price,
