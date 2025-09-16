@@ -72,6 +72,10 @@ async def generate_chat_responses(graph: StateGraph, message: str, topic: Litera
                             except (ValueError, SyntaxError, AttributeError) as e:
                                 logging.error(f"Error parsing tool output: {e}")
 
+                elif event_type == "on_chain_end" and event_name == "followup_node":
+                    followup_output = event_data["output"]
+                    yield f"data: {json.dumps({'type': 'followup_questions', 'questions': followup_output['followup_questions']})}\n\n"
+
                 # Handle streaming chain
                 elif event_type == "on_chain_stream":
                     chunk = event_data.get("chunk", {})

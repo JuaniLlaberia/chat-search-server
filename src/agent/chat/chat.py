@@ -1,7 +1,7 @@
 import os
 import logging
 from typing import TypedDict, Annotated, Literal
-from langgraph.graph import StateGraph, END, add_messages
+from langgraph.graph import StateGraph, END, add_messages, START
 from langgraph.checkpoint.memory import MemorySaver
 from langchain_core.messages import BaseMessage, ToolMessage
 from src.llm.model import get_gemini_model
@@ -9,11 +9,13 @@ from src.tools.search_tools import tavily_search
 from src.tools.date_tools import get_current_date, get_current_time
 from src.tools.weather import get_weather
 from src.tools.crypto_markets import get_crypto_price, get_crypto_details, get_trending_cryptos, search_crypto_coins, get_crypto_market_overview, get_top_cryptos
-from .utils.prompts import CHAT_PROMPT
+from .utils.prompts import CHAT_PROMPT, FOLLOWUP_QUESTIONS_PROMPT
+from .models.output import FollowupOutput
 
 class State(TypedDict):
     messages: Annotated[list, add_messages]
     topic: Literal["general", "news", "finance"]
+    followup_questions: list[str]
 
 class Chat:
     """
@@ -56,9 +58,12 @@ class Chat:
         # Add nodes
         graph.add_node("llm_node", self._llm_node)
         graph.add_node("tool_node", self._tool_node)
+        graph.add_node("followup_node", self._followup_node)
 
         # Add edges
-        graph.set_entry_point("llm_node")
+        graph.add_edge(START, "llm_node")
+        graph.add_edge(START, "followup_node")
+
         graph.add_conditional_edges(
             "llm_node",
             self._tools_router,
@@ -139,7 +144,6 @@ class Chat:
             "messages": tool_messages
         }
 
-
     async def _tools_router(self, state: State) -> Literal["tools", "end"]:
         """
         Node to decide if we need to use tools and route
@@ -150,3 +154,26 @@ class Chat:
             return "tools"
         else:
             return "end"
+
+    async def _followup_node(self, state: State):
+        """
+        Node to generate follow-up questions based on user query
+        """
+        last_message = state["messages"][-1]
+
+        structured_llm = self.llm.with_structured_output(FollowupOutput)
+        chain = FOLLOWUP_QUESTIONS_PROMPT | structured_llm
+
+        response = await chain.ainvoke({
+            "user_query": last_message.content
+        })
+
+        if isinstance(response, FollowupOutput):
+            followup_data = {"questions": response.questions}
+        else:
+            response_data = response.model_dump()
+            followup_data = {"questions": response_data.get("questions", [])}
+
+        return {
+            "followup_questions": followup_data["questions"]
+        }
