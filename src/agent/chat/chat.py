@@ -18,9 +18,9 @@ class State(TypedDict):
     messages: Annotated[list, add_messages]
     topic: Literal["general", "news", "finance"]
     followup_questions: list[str]
-
     mode: Literal["informative", "timeline"]
     events: list[TimelineEvent]
+    initial_response_generated: bool
 
 class Chat:
     """
@@ -62,33 +62,49 @@ class Chat:
         graph = StateGraph(State)
 
         # Add nodes
-        graph.add_node("llm_node", self._llm_node)
+        graph.add_node("initial_llm_node", self._initial_llm_node)
         graph.add_node("tool_node", self._tool_node)
         graph.add_node("followup_node", self._followup_node)
         graph.add_node("timeline_node", self._timeline_node)
+        graph.add_node("final_llm_node", self._final_llm_node)
 
         # Add edges
-        graph.add_edge(START, "llm_node")
-        graph.add_edge(START, "followup_node")
+        graph.add_edge(START, "initial_llm_node")
 
+        # Main content flow
         graph.add_conditional_edges(
-            "llm_node",
+            "initial_llm_node",
             self._tools_router,
             {
                 "tools": "tool_node",
                 "timeline": "timeline_node",
+                "final": "final_llm_node",
                 "end": END
             }
         )
 
-        graph.add_edge("tool_node", "llm_node")
+        # Parallel followup flow
+        graph.add_edge("initial_llm_node", "followup_node")
+
+        # After tools, decide next step based on mode
+        graph.add_conditional_edges(
+            "tool_node",
+            self._after_tools_router,
+            {
+                "timeline": "timeline_node",
+                "final": "final_llm_node"
+            }
+        )
+
         graph.add_edge("timeline_node", END)
+        graph.add_edge("final_llm_node", END)
+        graph.add_edge("followup_node", END)
 
         return graph.compile(checkpointer=self.memory)
 
-    async def _llm_node(self, state: State) -> dict[str, list[BaseMessage]]:
+    async def _initial_llm_node(self, state: State) -> dict[str, any]:
         """
-        Node that calls the llm with tools
+        Initial LLM call that generates the first response and determines next steps
         """
         if state.get("mode") == "timeline":
             chain = TIMELINE_CHAT_PROMPT | self.llm_with_tools
@@ -96,8 +112,10 @@ class Chat:
             chain = CHAT_PROMPT | self.llm_with_tools
 
         result = await chain.ainvoke({"messages": state["messages"]})
+
         return {
-            "messages": [result]
+            "messages": [result],
+            "initial_response_generated": True
         }
 
     async def _tool_node(self, state: State) -> dict[str, list]:
@@ -158,7 +176,29 @@ class Chat:
             "messages": tool_messages
         }
 
-    async def _tools_router(self, state: State) -> Literal["tools", "timeline", "end"]:
+    async def _final_llm_node(self, state: State) -> dict[str, list[BaseMessage]]:
+        """
+        Final LLM call after tools have been executed (for informative mode)
+        """
+        if state.get("mode") == "timeline":
+            return {"messages": []}
+
+        chain = CHAT_PROMPT | self.llm_with_tools
+        result = await chain.ainvoke({"messages": state["messages"]})
+        return {
+            "messages": [result]
+        }
+
+    async def _after_tools_router(self, state: State) -> Literal["timeline", "final"]:
+        """
+        Router to decide what to do after tools have been executed
+        """
+        if state["mode"] == "timeline":
+            return "timeline"
+        else:
+            return "final"
+
+    async def _tools_router(self, state: State) -> Literal["tools", "timeline", "final", "end"]:
         """
         Node to decide if we need to use tools and route
         """
@@ -168,20 +208,30 @@ class Chat:
             return "tools"
         elif state["mode"] == "timeline":
             return "timeline"
+        elif state.get("mode") == "informative":
+            return "final"
         else:
             return "end"
 
     async def _followup_node(self, state: State) -> dict[str, any]:
         """
-        Node to generate follow-up questions based on user query
+        Node to generate follow-up questions based on user query (runs in parallel)
         """
-        last_message = state["messages"][-1]
+        # Find the original user message
+        user_message = None
+        for message in state["messages"][::-1]:
+            if isinstance(message, HumanMessage):
+                user_message = message
+                break
+
+        if not user_message:
+            return {"followup_questions": []}
 
         structured_llm = self.llm.with_structured_output(FollowupOutput)
         chain = FOLLOWUP_QUESTIONS_PROMPT | structured_llm
 
         response = await chain.ainvoke({
-            "user_query": last_message.content
+            "user_query": user_message.content
         })
 
         if isinstance(response, FollowupOutput):
@@ -199,7 +249,6 @@ class Chat:
         Run timeline sub-agent
         """
         try:
-            logging.info("Starting timeline generation")
             user_query, search_info = self._extract_timeline_data(state)
 
             if not user_query:
