@@ -8,7 +8,7 @@ from uuid import uuid4
 from typing import Optional
 from src.utils.data_extraction import get_duckduckgo_favicon, extract_site_name
 
-async def generate_chat_responses(graph: StateGraph, message: str, topic: Literal["general", "news", "finance"], checkpoint_id: Optional[str] = None):
+async def generate_chat_responses(graph: StateGraph, message: str, topic: Literal["general", "news", "finance"], mode: Literal["informative", "timeline"] = "informative", checkpoint_id: Optional[str] = None):
     """
     Generate streaming chat responses
 
@@ -24,11 +24,11 @@ async def generate_chat_responses(graph: StateGraph, message: str, topic: Litera
             yield f"data: {json.dumps({'type': 'checkpoint', 'checkpoint_id': checkpoint_id})}\n\n"
 
         config = {"configurable": {"thread_id": checkpoint_id}}
-        print(config)
 
         input_data = {
             "messages": [HumanMessage(content=message.strip())],
             "topic": topic,
+            "mode": mode
         }
 
         sent_content = set()
@@ -44,6 +44,16 @@ async def generate_chat_responses(graph: StateGraph, message: str, topic: Litera
 
                 if event_name == "tool_node" and event_type == "on_chain_start":
                     yield f"data: {json.dumps({'type': 'search_start'})}\n\n"
+
+                elif event_name == "timeline_node" and event_type == "on_chain_start":
+                    yield f"data: {json.dumps({'type': 'timeline_generation_start'})}\n\n"
+
+                elif event_name == "timeline_node" and event_type == "on_chain_end":
+                    timeline_output = event_data["output"]
+                    events = timeline_output["events"]
+
+                    json_ready = [e.model_dump() for e in events]
+                    yield f"data: {json.dumps({'type': 'timeline_content', 'events': json_ready})}\n\n"
 
                 # Handle tool_node
                 elif event_name == "tool_node" and event_type in ["on_chain_stream", "on_chain_end"]:
