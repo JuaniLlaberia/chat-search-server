@@ -1,4 +1,4 @@
-# LangGraph Web Search Agent v1.1.0
+# LangGraph Web Search Agent v1.2.0
 
 This repository contains a configurable LangGraph agent designed to search the internet and return concise, sourced answers, images and related links. The agent behaves like a high-quality web research assistant: it issues web queries, evaluates sources, synthesizes results, and returns short summaries with references, sources, images and follow-up suggestions.
 
@@ -15,9 +15,17 @@ Key design goals:
 Front-end application: [Web Search Agent Frontend](https://github.com/JuaniLlaberia/chat-search-client)
 
 <details>
-  <summary>▶️ Watch Demo</summary>
+  <summary>▶️ Watch Informative Mode Demo</summary>
   
-  https://github.com/user-attachments/assets/b71270cb-307f-4218-a3bc-0117e76ae86e
+  https://github.com/user-attachments/assets/eeeb86cc-686a-48fb-97df-72b095d1540f
+
+
+</details>
+
+<details>
+  <summary>▶️ Watch Timeline Mode Demo</summary>
+  
+  https://github.com/user-attachments/assets/010bdf4d-b286-4ad9-9b9d-6602612d8e74
 
 
 </details>
@@ -34,11 +42,12 @@ Front-end application: [Web Search Agent Frontend](https://github.com/JuaniLlabe
 * Streaming responses with SSE for real-time UI updates
 * Modular design → easily extendable with new tools/agents
 * Transparent reasoning: exposes underlying sources
-
-Included in v1.1.0
 * Follow-up questions
 * LLM security
 
+Included in v1.2.0
+* Improved responsiveness
+* Timeline mode
 ---
 ## 📦 Installation & Usage
 1. Clone the repo:
