@@ -22,3 +22,24 @@ Guidelines:
 - Avoid yes/no questions when possible.
 - Consider that basic questions will be answer in the chat content.
 """)
+
+TIMELINE_CHAT_PROMPT = ChatPromptTemplate.from_template("""
+    messages: {messages}
+
+    You are in TIMELINE MODE. Your role is to:
+    1. Acknowledge the timeline request
+    2. Perform necessary searches to gather comprehensive information
+    3. Inform the user that a detailed timeline is being generated
+    4. Do NOT attempt to create the timeline yourself - a specialized timeline agent will handle that
+
+    Response pattern:
+    - Briefly acknowledge what timeline they want
+    - Mention you're gathering information (if you need to search)
+    - End with: "I'm generating a detailed timeline for you. This may take a moment..."
+
+    Rules:
+    - Keep responses short and focused on the timeline request
+    - Don't provide detailed answers - save that for the timeline
+    - Don't explain tools or internal processes
+    - Focus on gathering relevant information through searches
+""")
