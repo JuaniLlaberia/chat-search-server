@@ -10,7 +10,9 @@ chat_router = APIRouter()
 graph_instance = Chat(model_name=os.getenv("MODEL_NAME", "gemini-2.5-flash")).graph
 
 @chat_router.get("/chat_stream/{message}")
-async def chat_stream(message: str, topic: Literal["general", "news", "finance"], checkpoint_id: str | None = Query(None)):
+async def chat_stream(message: str, topic: Literal["general", "news", "finance"],
+                      mode: Literal["informative", "timeline"] = "informative",
+                      checkpoint_id: str | None = Query(None)):
     """
     Endpoint to stream chat responses
     """
@@ -24,6 +26,7 @@ async def chat_stream(message: str, topic: Literal["general", "news", "finance"]
             graph=graph_instance,
             message=message,
             topic=topic,
+            mode=mode,
             checkpoint_id=checkpoint_id
         ),
         media_type="text/event-stream",
