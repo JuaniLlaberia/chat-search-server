@@ -4,7 +4,9 @@ This repository contains a configurable LangGraph agent designed to search the i
 
 Key design goals:
 
+* Multi-Agent system
 * Fast, relevant answers to user questions.
+* Generate timelines.
 * Transparent sourcing (show where results came from).
 * Related images and sites.
 * Different tools (Finance, weather, time, etc.)
@@ -47,7 +49,7 @@ Front-end application: [Web Search Agent Frontend](https://github.com/JuaniLlabe
 
 Included in v1.2.0
 * Improved responsiveness
-* Timeline mode
+* Timeline mode (implemented using an extra agent + valudation cycle)
 ---
 ## 📦 Installation & Usage
 1. Clone the repo:
